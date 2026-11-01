@@ -1,0 +1,41 @@
+name: i386 networking on ubuntu-26.04
+on: [push, workflow_dispatch]
+jobs:
+  verify:
+    runs-on: ubuntu-26.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Docker as shipped fails
+        run: |
+          docker version --format 'client {{.Client.Version}}, server {{.Server.Version}}'
+          docker pull -q i386/debian:latest
+          if docker run --rm i386/debian:latest getent hosts deb.debian.org
+          then
+            echo "::error::expected the shipped Docker to fail"
+            exit 1
+          fi
+          echo "name resolution failed as expected"
+          docker run --rm --security-opt seccomp=unconfined i386/debian:latest getent hosts deb.debian.org
+      - name: Update Docker to 29.9.2 like install-docker.sh
+        run: |
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" |
+          sudo tee /etc/apt/sources.list.d/docker.list
+          sudo apt-get update -q
+          for p in containerd.io docker-ce-cli docker-ce
+          do
+            if test "$p" = containerd.io
+            then
+              sudo apt-get install -y -q --no-install-recommends "$p"
+            else
+              v=$(apt-cache madison "$p" | awk '{ print $3 }' | grep "29.9.2" | grep "$(lsb_release -cs)" | head -1)
+              sudo apt-get install -y -q --no-install-recommends "$p=$v"
+            fi
+          done
+          sudo systemctl restart docker
+          docker version --format 'client {{.Client.Version}}, server {{.Server.Version}}'
+      - name: Updated Docker works
+        run: |
+          docker run --rm i386/debian:latest getent hosts deb.debian.org
+          docker run --rm i386/debian:latest sh -c 'apt-get -q update && apt-get -q -y install libc6-amd64 lib64stdc++6'
