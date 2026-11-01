@@ -17,7 +17,7 @@ jobs:
           fi
           echo "name resolution failed as expected"
           docker run --rm --security-opt seccomp=unconfined i386/debian:latest getent hosts deb.debian.org
-      - name: Update Docker to 29.9.2 like install-docker.sh
+      - name: Update Docker to 29.7.2 like install-docker.sh
         run: |
           curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" |
@@ -29,7 +29,7 @@ jobs:
             then
               sudo apt-get install -y -q --no-install-recommends "$p"
             else
-              v=$(apt-cache madison "$p" | awk '{ print $3 }' | grep "29.9.2" | grep "$(lsb_release -cs)" | head -1)
+              v=$(apt-cache madison "$p" | awk '{ print $3 }' | grep "29.7.2" | grep "$(lsb_release -cs)" | head -1)
               sudo apt-get install -y -q --no-install-recommends "$p=$v"
             fi
           done
